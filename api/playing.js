@@ -5,9 +5,10 @@ const path = require("path");
 registerFont(path.join(__dirname, "fonts", "RobotoMono.ttf"), { family: "RobotoMono" });
 
 export default async function handler(req, res) {
+    console.log(`Request method: ${req.method}, URL: ${req.url}`);
+    
     const username = "Squirre1Z";
     const apiKey = process.env.api;
-    const timestamp = Date.now();
 
     const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=1`;
 
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
         const track = data.recenttracks.track[0];
         const song = track.name;
         const artist = track.artist["#text"];
-        const albumArt = track.image[2]["#text"] || "https://ggg.com/gg.jpg"
+        const albumArt = track.image[2]["#text"] || "https://ggg.com/gg.jpg";
 
         const canvas = createCanvas(500, 200);
         const ctx = canvas.getContext("2d");
@@ -52,18 +53,22 @@ export default async function handler(req, res) {
 
             lines.push(line);
 
+            let textY = y;
             for (let i = 0; i < lines.length; i++) {
-                ctx.fillText(lines[i], x, y + (i * lineHeight));
+                ctx.fillText(lines[i], x, textY);
+                textY += lineHeight;
             }
+
+            return textY;
         }
 
         ctx.fillStyle = "#fff";
         ctx.font = "bold 20px 'RobotoMono'";
-        wrapText(song, 200, 80, 280, 25);
+        let newY = wrapText(song, 200, 70, 280, 25);
 
         ctx.font = "16px 'RobotoMono'";
         ctx.fillStyle = "#bbb";
-        wrapText(artist, 200, 110, 280, 20);
+        wrapText(artist, 200, newY + 5, 280, 20);
 
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -73,3 +78,4 @@ export default async function handler(req, res) {
         res.status(500).send("Error generating image");
     }
 }
+
