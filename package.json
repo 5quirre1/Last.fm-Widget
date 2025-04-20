@@ -1,17 +1,19 @@
 {
-    "name": "lastfm-track-image",
-    "version": "1.0.0",
-    "description": "Generate track images with last.fm data",
-    "scripts": {
-      "dev": "vercel dev",
-      "build": "vercel build"
-    },
-    "dependencies": {
-      "canvas": "^3.1.0",
-      "node-fetch": "^2.6.7"
-    },
-    "engines": { "node": "22.x" },
-    "devDependencies": {}
+  "name": "lastfm-track-image",
+  "version": "1.0.0",
+  "description": "make an image with your lastfm track data stuff yk",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "canvas": "^3.1.0",
+    "node-fetch": "^2.6.7"
+  },
+  "engines": { "node": ">=20.x" },
+  "devDependencies": {
+    "vercel": "^28.20.0"
   }
-  
-  
+}
