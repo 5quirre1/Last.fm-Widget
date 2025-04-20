@@ -1,24 +1,27 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "api/**",
-        "use": "@vercel/node"
-      }
-    ],
-    "routes": [
-      {
-        "src": "/api/playing",
-        "dest": "/api/playing.js"
-      },
-      {
-        "src": "/api/playingFRAME",
-        "dest": "/api/serveHTML.js"
-      },
-      {
-        "src": "/api/(.*)",
-        "dest": "/api/$1"
-      }
-    ]
-  }
-  
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/api/playing.js"
+    },
+    {
+      "src": "/api/playing",
+      "dest": "/api/playing.js"
+    },
+    {
+      "src": "/api/playingFRAME",
+      "dest": "/api/serveHTML.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ]
+}
