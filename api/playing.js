@@ -7,20 +7,20 @@ const crypto = require("crypto");
 
 registerFont(path.join(__dirname, "fonts", "RobotoMono-Bold.ttf"), { family: "RobotoMono", weight: "bold" });
 registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), { family: "RobotoMono" });
-
 const COLORS = {
     background: "#121212",
     cardBg: "#1E1E1E",
     primary: "#FFFFFF",
     secondary: "#B3B3B3",
     accent: "#1DB954",
-    playing: "#1DB954"
+    playing: "#1DB954",
+    recently: "#FF3333"
 };
 
 export default async function handler(req, res) {
     console.log(`api request received: ${req.method} ${req.url}`);
 
-    const username = req.query.username || "Squirre1Z";
+    const username = req.query.username;
     const apiKey = process.env.api;
 
     if (!apiKey) {
@@ -28,19 +28,27 @@ export default async function handler(req, res) {
         return res.status(500).send("server configuration error");
     }
 
+    if (!username) {
+        const noUserBuffer = await generateFallbackCard("Hai! you need to put a user..", "Example: '?username=Squirre1Z'");
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=60");
+        return res.send(noUserBuffer);
+    }
+
     try {
         const randomId = crypto.randomBytes(4).toString('hex');
+        const userData = await fetchUserData(username, apiKey);
         const trackData = await fetchLastFmData(username, apiKey);
 
         if (!trackData || (!trackData.title && !trackData.artist)) {
             console.warn("no track data received from last.fm, displaying fallback.");
-            const emptyBuffer = await generateFallbackCard("not Listening");
+            const emptyBuffer = await generateFallbackCard("no track data found..", null, userData);
             res.setHeader("Content-Type", "image/png");
             res.setHeader("Cache-Control", "public, max-age=30");
             return res.send(emptyBuffer);
         }
 
-        const imageBuffer = await generateNowPlayingCard(trackData);
+        const imageBuffer = await generateNowPlayingCard(trackData, userData);
 
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "public, max-age=30");
@@ -58,19 +66,46 @@ export default async function handler(req, res) {
 
         return res.send(imageBuffer);
     } catch (error) {
-        console.error("Error generating now playing card:", error);
+        console.error("error generating now playing card:", error);
 
         if (error.message === "NOT_FOUND") {
-            const notFoundBuffer = await generateFallbackCard("User Not Found");
+            const notFoundBuffer = await generateFallbackCard("${username} not found..");
             res.setHeader("Content-Type", "image/png");
             res.setHeader("Cache-Control", "public, max-age=60");
             return res.status(404).send(notFoundBuffer);
         }
 
-        const errorBuffer = await generateFallbackCard("Error Fetching Data");
+        const errorBuffer = await generateFallbackCard("error fetching data");
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "public, max-age=10");
         return res.status(500).send(errorBuffer);
+    }
+}
+
+async function fetchUserData(username, apiKey) {
+    const url = `https://ws.audioscrobbler.com/2.0/?method=user.getinfo&user=${username}&api_key=${apiKey}&format=json&_=${Date.now()}`;
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error("last.fm API error:", error);
+            if (error?.error === 6) {
+                throw new Error("NOT_FOUND");
+            }
+            throw new Error("API_ERROR");
+        }
+
+        const data = await response.json();
+
+        return {
+            username: data.user.name,
+            profileImage: data.user.image[2]["#text"]
+        };
+    } catch (error) {
+        console.error("error fetching user data from Last.fm:", error);
+        throw error;
     }
 }
 
@@ -110,8 +145,8 @@ async function fetchLastFmData(username, apiKey) {
     }
 }
 
-async function generateNowPlayingCard(trackData) {
-    const canvas = createCanvas(800, 266);
+async function generateNowPlayingCard(trackData, userData) {
+    const canvas = createCanvas(600, 200);
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = COLORS.background;
@@ -125,6 +160,25 @@ async function generateNowPlayingCard(trackData) {
     ctx.fill();
 
     try {
+        if (userData && userData.profileImage) {
+            const profileImg = await loadImage(userData.profileImage);
+            const profileSize = 34;
+            const profileX = canvas.width - profileSize - 20;
+            const profileY = 22;
+
+            ctx.save();
+            roundRect(ctx, profileX, profileY, profileSize, profileSize, 6);
+            ctx.clip();
+            ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
+            ctx.restore();
+
+            ctx.fillStyle = COLORS.primary;
+            ctx.font = "14px 'RobotoMono'";
+            ctx.textAlign = "right";
+            ctx.fillText(userData.username, profileX - 8, profileY + profileSize / 2 + 5);
+            ctx.textAlign = "left";
+        }
+
         const img = await loadImage(trackData.albumArt);
 
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -132,9 +186,9 @@ async function generateNowPlayingCard(trackData) {
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
 
-        const artSize = 213;
-        const artX = 40;
-        const artY = 30;
+        const artSize = 150;
+        const artX = 25;
+        const artY = 25;
 
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
@@ -144,51 +198,46 @@ async function generateNowPlayingCard(trackData) {
         ctx.drawImage(img, artX, artY, artSize, artSize);
         ctx.restore();
 
-        const textX = artX + artSize + 30;
-        const textWidth = canvas.width - textX - 30;
+        const textX = artX + artSize + 20;
+        const textWidth = canvas.width - textX - 100;
 
         if (trackData.isNowPlaying) {
             ctx.fillStyle = COLORS.playing;
-            ctx.font = "bold 18px 'RobotoMono'";
+            ctx.font = "bold 16px 'RobotoMono'";
             const nowPlayingText = "CURRENTLY PLAYING";
-            ctx.fillText(nowPlayingText, textX, 50);
+            ctx.fillText(nowPlayingText, textX, 40);
 
             const nowPlayingWidth = ctx.measureText(nowPlayingText).width;
 
             ctx.fillStyle = COLORS.accent;
-            ctx.fillRect(textX, 58, nowPlayingWidth, 4);
-
-            const titleY = 95;
-
-            ctx.fillStyle = COLORS.primary;
-            ctx.font = "bold 30px 'RobotoMono'";
-            const wrappedTitleY = wrapText(ctx, trackData.title, textX, titleY, textWidth, 36);
-
-            ctx.fillStyle = COLORS.secondary;
-            ctx.font = "24px 'RobotoMono'";
-            const artistY = wrappedTitleY + 20;
-            const wrappedArtistY = wrapText(ctx, trackData.artist, textX, artistY, textWidth, 28);
-
-            if (trackData.album) {
-                ctx.fillStyle = COLORS.secondary;
-                ctx.font = "20px 'RobotoMono'";
-                wrapText(ctx, trackData.album, textX, wrappedArtistY + 20, textWidth, 24);
-            }
+            ctx.fillRect(textX, 46, nowPlayingWidth, 3);
         } else {
-            ctx.fillStyle = COLORS.primary;
-            ctx.font = "bold 30px 'RobotoMono'";
-            const wrappedTitleY = wrapText(ctx, trackData.title, textX, 80, textWidth, 36);
+            ctx.fillStyle = COLORS.recently;
+            ctx.font = "bold 16px 'RobotoMono'";
+            const recentlyPlayedText = "RECENTLY PLAYED";
+            ctx.fillText(recentlyPlayedText, textX, 40);
 
+            const recentlyPlayedWidth = ctx.measureText(recentlyPlayedText).width;
+
+            ctx.fillStyle = COLORS.recently;
+            ctx.fillRect(textX, 46, recentlyPlayedWidth, 3);
+        }
+
+        const titleY = 75;
+
+        ctx.fillStyle = COLORS.primary;
+        ctx.font = "bold 21px 'RobotoMono'";
+        const wrappedTitleY = wrapText(ctx, trackData.title, textX, titleY, textWidth, 25);
+
+        ctx.fillStyle = COLORS.secondary;
+        ctx.font = "17px 'RobotoMono'";
+        const artistY = wrappedTitleY + 25;
+        const wrappedArtistY = wrapText(ctx, trackData.artist, textX, artistY, textWidth, 21);
+
+        if (trackData.album) {
             ctx.fillStyle = COLORS.secondary;
-            ctx.font = "24px 'RobotoMono'";
-            const artistY = wrappedTitleY + 20;
-            const wrappedArtistY = wrapText(ctx, trackData.artist, textX, artistY, textWidth, 28);
-
-            if (trackData.album) {
-                ctx.fillStyle = COLORS.secondary;
-                ctx.font = "20px 'RobotoMono'";
-                wrapText(ctx, trackData.album, textX, wrappedArtistY + 20, textWidth, 24);
-            }
+            ctx.font = "15px 'RobotoMono'";
+            ctx.fillText(trackData.album, textX, wrappedArtistY + 25);
         }
 
         return canvas.toBuffer("image/png");
@@ -196,33 +245,81 @@ async function generateNowPlayingCard(trackData) {
         console.error("error loading album art:", imgError);
 
         ctx.fillStyle = "#2E2E2E";
-        roundRect(ctx, 40, 30, 213, 213, 10);
+        roundRect(ctx, 25, 25, 150, 150, 10);
         ctx.fill();
 
         ctx.fillStyle = "#555";
-        ctx.font = "100px sans-serif";
-        ctx.fillText("♪", 100, 170);
+        ctx.font = "80px sans-serif";
+        ctx.fillText("♪", 60, 125);
+
+        if (userData && userData.profileImage) {
+            try {
+                const profileImg = await loadImage(userData.profileImage);
+                const profileSize = 34;
+                const profileX = canvas.width - profileSize - 20;
+                const profileY = 22;
+
+                ctx.save();
+                roundRect(ctx, profileX, profileY, profileSize, profileSize, 6);
+                ctx.clip();
+                ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
+                ctx.restore();
+
+                ctx.fillStyle = COLORS.primary;
+                ctx.font = "14px 'RobotoMono'";
+                ctx.textAlign = "right";
+                ctx.fillText(userData.username, profileX - 8, profileY + profileSize / 2 + 5);
+                ctx.textAlign = "left";
+            } catch (e) {
+                console.error("error displaying profile image:", e);
+            }
+        }
+
+        const textX = 195;
+        const textWidth = canvas.width - textX - 100;
+
+        if (trackData.isNowPlaying) {
+            ctx.fillStyle = COLORS.playing;
+            ctx.font = "bold 16px 'RobotoMono'";
+            const nowPlayingText = "CURRENTLY PLAYING";
+            ctx.fillText(nowPlayingText, textX, 40);
+
+            const nowPlayingWidth = ctx.measureText(nowPlayingText).width;
+
+            ctx.fillStyle = COLORS.accent;
+            ctx.fillRect(textX, 46, nowPlayingWidth, 3);
+        } else {
+            ctx.fillStyle = COLORS.recently;
+            ctx.font = "bold 16px 'RobotoMono'";
+            const recentlyPlayedText = "RECENTLY PLAYED";
+            ctx.fillText(recentlyPlayedText, textX, 40);
+
+            const recentlyPlayedWidth = ctx.measureText(recentlyPlayedText).width;
+
+            ctx.fillStyle = COLORS.recently;
+            ctx.fillRect(textX, 46, recentlyPlayedWidth, 3);
+        }
 
         ctx.fillStyle = COLORS.primary;
-        ctx.font = "bold 30px 'RobotoMono'";
-        const wrappedTitleY = wrapText(ctx, trackData.title, 270, 90, 500, 36);
+        ctx.font = "bold 21px 'RobotoMono'";
+        const wrappedTitleY = wrapText(ctx, trackData.title, textX, 70, textWidth, 25);
 
         ctx.fillStyle = COLORS.secondary;
-        ctx.font = "24px 'RobotoMono'";
-        const wrappedArtistY = wrapText(ctx, trackData.artist, 270, wrappedTitleY + 20, 500, 28);
+        ctx.font = "17px 'RobotoMono'";
+        const wrappedArtistY = wrapText(ctx, trackData.artist, textX, wrappedTitleY + 25, textWidth, 21);
 
         if (trackData.album) {
             ctx.fillStyle = COLORS.secondary;
-            ctx.font = "20px 'RobotoMono'";
-            wrapText(ctx, trackData.album, 270, wrappedArtistY + 20, 500, 24);
+            ctx.font = "15px 'RobotoMono'";
+            ctx.fillText(trackData.album, textX, wrappedArtistY + 25);
         }
 
         return canvas.toBuffer("image/png");
     }
 }
 
-async function generateFallbackCard(message) {
-    const canvas = createCanvas(800, 266);
+async function generateFallbackCard(message, submessage = null, userData = null) {
+    const canvas = createCanvas(600, 200);
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = COLORS.background;
@@ -235,13 +332,43 @@ async function generateFallbackCard(message) {
     roundRect(ctx, 10, 10, canvas.width - 20, canvas.height - 20, 16);
     ctx.fill();
 
+    if (userData && userData.profileImage) {
+        try {
+            const profileImg = await loadImage(userData.profileImage);
+            const profileSize = 34;
+            const profileX = canvas.width - profileSize - 20;
+            const profileY = 22;
+
+            ctx.save();
+            roundRect(ctx, profileX, profileY, profileSize, profileSize, 6);
+            ctx.clip();
+            ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
+            ctx.restore();
+
+            ctx.fillStyle = COLORS.primary;
+            ctx.font = "14px 'RobotoMono'";
+            ctx.textAlign = "right";
+            ctx.fillText(userData.username, profileX - 8, profileY + profileSize / 2 + 5);
+            ctx.textAlign = "left";
+        } catch (e) {
+            console.error("error displaying profile image:", e);
+        }
+    }
+
     ctx.fillStyle = COLORS.secondary;
-    ctx.font = "32px 'RobotoMono'";
+    ctx.font = "26px 'RobotoMono'";
     const textWidth = ctx.measureText(message).width;
     const textX = (canvas.width - textWidth) / 2;
-    const textY = canvas.height / 2 + 12;
+    const textY = canvas.height / 2;
 
     ctx.fillText(message, textX, textY);
+
+    if (submessage) {
+        ctx.font = "16px 'RobotoMono'";
+        const submessageWidth = ctx.measureText(submessage).width;
+        const submessageX = (canvas.width - submessageWidth) / 2;
+        ctx.fillText(submessage, submessageX, textY + 30);
+    }
 
     return canvas.toBuffer("image/png");
 }
@@ -282,7 +409,7 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 
     const linesToDraw = lines.length > 2 ? lines.slice(0, 2) : lines;
     if (lines.length > 2) {
-        linesToDraw[1] = linesToDraw[1].trim() + '...';
+        linesToDraw[1] = linesToDraw[1].trim() + ' ...';
     }
 
     let textY = y;
