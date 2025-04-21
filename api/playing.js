@@ -237,7 +237,8 @@ async function generateNowPlayingCard(trackData, userData) {
         if (trackData.album) {
             ctx.fillStyle = COLORS.secondary;
             ctx.font = "15px 'RobotoMono'";
-            ctx.fillText(trackData.album, textX, wrappedArtistY + 25);
+            const albumY = wrappedArtistY + 18;
+            wrapText(ctx, trackData.album, textX, albumY, textWidth, 20);
         }
 
         return canvas.toBuffer("image/png");
@@ -311,7 +312,8 @@ async function generateNowPlayingCard(trackData, userData) {
         if (trackData.album) {
             ctx.fillStyle = COLORS.secondary;
             ctx.font = "15px 'RobotoMono'";
-            ctx.fillText(trackData.album, textX, wrappedArtistY + 25);
+            const albumY = wrappedArtistY + 18;
+            wrapText(ctx, trackData.album, textX, albumY, textWidth, 20);
         }
 
         return canvas.toBuffer("image/png");
