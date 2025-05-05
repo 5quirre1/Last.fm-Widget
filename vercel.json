@@ -16,10 +16,6 @@
       "dest": "/api/playing.js"
     },
     {
-      "src": "/api/playingFRAME",
-      "dest": "/api/serveHTML.js"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     }
