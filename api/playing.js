@@ -1,6 +1,6 @@
 /*
  *  ================================================
- *           CODE BY SQUIRREL GAY ACORNS!!!
+ *           CODE BY SQUIRREL GAY ACORNS!!
  *  =================================================
  *        Give credit if you steal my code sob
  *  =================================================
