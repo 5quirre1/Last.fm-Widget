@@ -61,7 +61,7 @@ export default async function handler(req, res) {
             const redirectUrl = `${baseUrl}${separator}rid=${randomId}`;
 
             res.setHeader("Location", redirectUrl);
-            return res.status(302).send("Redirecting to unique URL");
+            return res.status(302).send("redirecting to unique URL");
         }
 
         return res.send(imageBuffer);
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
         console.error("error generating now playing card:", error);
 
         if (error.message === "NOT_FOUND") {
-            const notFoundBuffer = await generateFallbackCard("${username} not found..");
+            const notFoundBuffer = await generateFallbackCard(`user '${username}' not found..`);
             res.setHeader("Content-Type", "image/png");
             res.setHeader("Cache-Control", "public, max-age=60");
             return res.status(404).send(notFoundBuffer);
