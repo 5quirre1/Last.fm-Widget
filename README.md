@@ -67,4 +67,4 @@ hide some stuff
 * `hideProfile` - Hide profile section (e.g., `?hideProfile=true`)
 * `hideAlbum` - Hide album name (e.g., `?hideAlbum=true`)
 * `hideStatus` - Hide playing status (e.g., `?hideStatus=true`)
-* `-round` - Corner radius for the card (e.g., `?round=20`)
+* `round` - Corner radius for the card (e.g., `?round=20`)
