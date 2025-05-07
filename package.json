@@ -12,7 +12,9 @@
     "canvas": "^3.1.0",
     "node-fetch": "^2.6.7"
   },
-  "engines": { "node": ">=20.x" },
+  "engines": {
+    "node": ">=20.x"
+  },
   "devDependencies": {
     "vercel": "^28.20.0"
   }
