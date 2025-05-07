@@ -17,6 +17,8 @@ I've added styling options to the widget! Here are some examples to show off wha
 
 ![4](https://last-fm-ruby.vercel.app/?username=Squirre1Z&bg=191414&cardBg=212121&primary=FFFFFF&secondary=B3B3B3&accent=1DB954&playing=1DB954&recently=E61E32&round=12&width=640&artSize=160)
 
+![5](https://last-fm-ruby.vercel.app/?username=Squirre1Z&bg=22163b&cardBg=5f2763&primary=3bad54&secondary=55bded&playing=f7e307&recently=f76307)
+
 
 # Customization Options
 
