@@ -16,6 +16,10 @@
       "dest": "/api/playing.js"
     },
     {
+      "src": "/playing.png",
+      "dest": "/api/playing.js"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     }
