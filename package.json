@@ -2,12 +2,16 @@
   "name": "lastfm-track-image",
   "version": "1.0.0",
   "description": "make an image with your lastfm track data stuff yk",
+  "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
     "build": "vercel build",
+    "start": "node index.js"
   },
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "gifencoder": "^2.0.1",
+    "canvas": "^2.11.2"
   },
   "engines": { "node": ">=20.x" },
   "devDependencies": {
