@@ -35,6 +35,7 @@ const fetch = require("node-fetch");
 const crypto = require("crypto");
 const GIFEncoder = require('gifencoder');
 const { createCanvas } = require('canvas');
+const path = require("path");
 
 registerFont(path.join(__dirname, "fonts", "RobotoMono-Bold.ttf"), {
     family: "RobotoMono",
