@@ -36,6 +36,15 @@ const crypto = require("crypto");
 const GIFEncoder = require('gifencoder');
 const { createCanvas } = require('canvas');
 
+registerFont(path.join(__dirname, "fonts", "RobotoMono-Bold.ttf"), {
+    family: "RobotoMono",
+    weight: "bold"
+});
+registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
+    family: "RobotoMono"
+});
+
+
 const DEFAULT_COLORS = {
 	background: "#121212",
 	cardBg: "#1E1E1E",
