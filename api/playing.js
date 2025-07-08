@@ -47,7 +47,7 @@ registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
 
 
 const DEFAULT_COLORS = {
-	background: "#121212",
+	background: "transparent",
 	cardBg: "#1E1E1E",
 	primary: "#FFFFFF",
 	secondary: "#B3B3B3",
