@@ -47,7 +47,7 @@ registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
 
 
 const DEFAULT_COLORS = {
-	background: "transparent",
+	background: "transparent", 
 	cardBg: "#1E1E1E",
 	primary: "#FFFFFF",
 	secondary: "#B3B3B3",
@@ -267,6 +267,7 @@ async function generateNowPlayingGIF(trackData, userData, customOptions = {}) {
 	encoder.start();
 	encoder.setRepeat(0);
 	encoder.setDelay(100);
+	encoder.setTransparent(true);
 
 	const canvas = createCanvas(dimensions.width, dimensions.height);
 	const ctx = canvas.getContext('2d');
@@ -274,6 +275,8 @@ async function generateNowPlayingGIF(trackData, userData, customOptions = {}) {
 	const frames = trackData.isNowPlaying ? 20 : 1;
 
 	for (let frame = 0; frame < frames; frame++) {
+		ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+		
 		applyCardStyleCanvas(ctx, dimensions, colors, layout, padding);
 
 		if (userData && userData.profileImage && !layout.hideProfile) {
@@ -360,12 +363,11 @@ function generateFallbackGIF(message, submessage = null, userData = null, custom
 	encoder.start();
 	encoder.setRepeat(0);
 	encoder.setDelay(1000);
+	encoder.setTransparent(true);
 
 	const canvas = createCanvas(dimensions.width, dimensions.height);
 	const ctx = canvas.getContext('2d');
-
-	ctx.fillStyle = colors.background;
-	ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+	ctx.clearRect(0, 0, dimensions.width, dimensions.height);
 
 	applyCardStyleCanvas(ctx, dimensions, colors, layout);
 
