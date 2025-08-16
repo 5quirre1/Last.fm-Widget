@@ -29,7 +29,6 @@
  *  SOFTWARE.
  *  /////////////////////////////////////////////////////////////////////////////
  */
-
 const fetch = require("node-fetch");
 const crypto = require("crypto");
 const {
@@ -246,7 +245,21 @@ async function generateNowPlayingPNG(trackData, userData, customOptions = {}) {
 			profileImg = null;
 		}
 	}
-	ctx.drawImage(albumImg, 0, 0, dimensions.width, dimensions.height);
+	const albumAspectRatio = albumImg.width / albumImg.height;
+	const canvasAspectRatio = dimensions.width / dimensions.height;
+	let drawWidth, drawHeight, drawX, drawY;
+	if (albumAspectRatio > canvasAspectRatio) {
+		drawHeight = dimensions.height;
+		drawWidth = drawHeight * albumAspectRatio;
+		drawX = (dimensions.width - drawWidth) / 2;
+		drawY = 0;
+	} else {
+		drawWidth = dimensions.width;
+		drawHeight = drawWidth / albumAspectRatio;
+		drawX = 0;
+		drawY = (dimensions.height - drawHeight) / 2;
+	}
+	ctx.drawImage(albumImg, drawX, drawY, drawWidth, drawHeight);
 	ctx.fillStyle = COLORS.overlay;
 	ctx.fillRect(0, 0, dimensions.width, dimensions.height);
 	ctx.fillStyle = COLORS.topBar;
