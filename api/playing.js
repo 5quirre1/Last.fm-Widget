@@ -53,7 +53,7 @@ const COLORS = {
 	recently: "#FF6B6B"
 };
 const DEFAULT_DIMENSIONS = {
-	width: 180,
+	width: 279,
 	height: 168
 };
 
