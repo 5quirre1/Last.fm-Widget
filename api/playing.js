@@ -30,145 +30,97 @@
  *  /////////////////////////////////////////////////////////////////////////////
  */
 
-
 const fetch = require("node-fetch");
 const crypto = require("crypto");
-const GIFEncoder = require('gifencoder');
-const { createCanvas, registerFont } = require('canvas');
+const {
+	createCanvas,
+	registerFont
+} = require('canvas');
 const path = require("path");
-
 registerFont(path.join(__dirname, "fonts", "RobotoMono-Bold.ttf"), {
-    family: "RobotoMono",
-    weight: "bold"
+	family: "RobotoMono",
+	weight: "bold"
 });
 registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
-    family: "RobotoMono"
+	family: "RobotoMono"
 });
-
-
-const DEFAULT_COLORS = {
-	background: "transparent", 
-	cardBg: "#1E1E1E",
+const COLORS = {
+	background: "transparent",
+	overlay: "rgba(0, 0, 0, 0.41)",
+	topBar: "rgba(0, 0, 0, 0.8)",
 	primary: "#FFFFFF",
-	secondary: "#B3B3B3",
-	accent: "#1DB954",
-	playing: "#1DB954",
-	recently: "#FF3333"
+	secondary: "#E0E0E0",
+	playing: "#1ED760",
+	recently: "#FF6B6B"
 };
-
-const DEFAULT_FONT_SIZES = {
-	username: 14,
-	status: 16,
-	title: 21,
-	artist: 17,
-	album: 15
-};
-
 const DEFAULT_DIMENSIONS = {
-	width: 600,
-	height: 200,
-	artSize: 150
+	width: 400,
+	height: 250
+};
+const MIN_DIMENSIONS = {
+	width: 200,
+	height: 125
+};
+const MAX_DIMENSIONS = {
+	width: 800,
+	height: 500
 };
 
-const CARD_STYLES = {
-	DEFAULT: 'default',
-	BOX: 'box',
-	CIRCLE: 'circle',
-	MODERN: 'modern',
-	NEOMORPH: 'neomorph'
-};
-
-function truncateText(text, maxWidth, fontSize) {
-	if (!text) return '';
-
-	const avgCharWidth = fontSize * 0.6;
-	const maxChars = Math.floor(maxWidth / avgCharWidth);
-
-	if (text.length <= maxChars) return text;
-
-	const words = text.split(' ');
-	let truncated = '';
-
-	for (const word of words) {
-		if ((truncated + word).length > maxChars - 3) break;
-		if (truncated) truncated += ' ';
-		truncated += word;
-	}
-
-	return truncated + (truncated.length < text.length ? '...' : '');
+function calculateResponsiveElements(width, height) {
+	const widthScale = width / DEFAULT_DIMENSIONS.width;
+	const heightScale = height / DEFAULT_DIMENSIONS.height;
+	const scale = Math.min(widthScale, heightScale);
+	const minScale = 0.5;
+	const maxScale = 2.0;
+	const finalScale = Math.max(minScale, Math.min(maxScale, scale));
+	const fontSizes = {
+		username: Math.max(8, Math.round(11 * finalScale)),
+		status: Math.max(7, Math.round(10 * finalScale)),
+		title: Math.max(12, Math.round(18 * finalScale)),
+		artist: Math.max(10, Math.round(14 * finalScale))
+	};
+	const padding = Math.max(8, Math.round(16 * finalScale));
+	const topBarHeight = Math.max(24, Math.round(32 * finalScale));
+	const profileSize = Math.max(16, Math.round(24 * finalScale));
+	const waveBarWidth = Math.max(2, Math.round(3 * finalScale));
+	const waveBarSpacing = Math.max(2, Math.round(3 * finalScale));
+	const waveMaxHeight = Math.max(8, Math.round(15 * finalScale));
+	const fadeWidth = Math.max(30, Math.round(60 * finalScale));
+	return {
+		fontSizes,
+		padding,
+		topBarHeight,
+		profileSize,
+		scale: finalScale,
+		waveBarWidth,
+		waveBarSpacing,
+		waveMaxHeight,
+		fadeWidth
+	};
 }
 
 function parseCustomOptions(query) {
-	const options = {
-		colors: {
-			...DEFAULT_COLORS
-		},
-		fontSizes: {
-			...DEFAULT_FONT_SIZES
-		},
-		dimensions: {
-			...DEFAULT_DIMENSIONS
-		},
-		layout: {
-			cardStyle: CARD_STYLES.DEFAULT
-		},
-		fonts: {}
+	let dimensions = {
+		...DEFAULT_DIMENSIONS
 	};
-
-	if (query.cardBg) options.colors.cardBg = `#${query.cardBg}`;
-	if (query.primary) options.colors.primary = `#${query.primary}`;
-	if (query.secondary) options.colors.secondary = `#${query.secondary}`;
-	if (query.accent) options.colors.accent = `#${query.accent}`;
-	if (query.playing) options.colors.playing = `#${query.playing}`;
-	if (query.recently) options.colors.recently = `#${query.recently}`;
-
-	if (query.theme) {
-		switch (query.theme.toLowerCase()) {
-			case 'dark':
-				break;
-			case 'light':
-				options.colors.cardBg = '#FFFFFF';
-				options.colors.primary = '#121212';
-				options.colors.secondary = '#555555';
-				break;
-			case 'blue':
-				options.colors.accent = '#1E88E5';
-				options.colors.playing = '#1E88E5';
-				break;
-			case 'pink':
-				options.colors.accent = '#E91E63';
-				options.colors.playing = '#E91E63';
-				break;
-		}
+	if (query.width) {
+		dimensions.width = Math.max(MIN_DIMENSIONS.width,
+			Math.min(MAX_DIMENSIONS.width, parseInt(query.width)));
 	}
-
-	if (query.usernameSize) options.fontSizes.username = parseInt(query.usernameSize);
-	if (query.statusSize) options.fontSizes.status = parseInt(query.statusSize);
-	if (query.titleSize) options.fontSizes.title = parseInt(query.titleSize);
-	if (query.artistSize) options.fontSizes.artist = parseInt(query.artistSize);
-	if (query.albumSize) options.fontSizes.album = parseInt(query.albumSize);
-
-	if (query.width) options.dimensions.width = parseInt(query.width);
-	if (query.height) options.dimensions.height = parseInt(query.height);
-	if (query.artSize) options.dimensions.artSize = parseInt(query.artSize);
-
-	if (query.hideProfile === 'true') options.layout.hideProfile = true;
-	if (query.hideAlbum === 'true') options.layout.hideAlbum = true;
-	if (query.hideStatus === 'true') options.layout.hideStatus = true;
-	if (query.round) options.layout.cornerRadius = parseInt(query.round);
-	if (query.cardStyle) options.layout.cardStyle = query.cardStyle.toLowerCase();
-
-	if (query.fontFamily) options.fonts.fontFamily = query.fontFamily;
-
-	return options;
+	if (query.height) {
+		dimensions.height = Math.max(MIN_DIMENSIONS.height,
+			Math.min(MAX_DIMENSIONS.height, parseInt(query.height)));
+	}
+	const responsiveElements = calculateResponsiveElements(dimensions.width, dimensions.height);
+	return {
+		dimensions,
+		responsiveElements
+	};
 }
-
 async function fetchUserData(username, apiKey) {
 	const url = `https://ws.audioscrobbler.com/2.0/?method=user.getinfo&user=${username}&api_key=${apiKey}&format=json&_=${Date.now()}`;
-
 	try {
 		const response = await fetch(url);
-
 		if (!response.ok) {
 			const error = await response.json();
 			console.error("Last.fm API error:", error);
@@ -177,9 +129,7 @@ async function fetchUserData(username, apiKey) {
 			}
 			throw new Error("API_ERROR");
 		}
-
 		const data = await response.json();
-
 		return {
 			username: data.user.name,
 			profileImage: data.user.image[2]["#text"]
@@ -189,13 +139,10 @@ async function fetchUserData(username, apiKey) {
 		throw error;
 	}
 }
-
 async function fetchLastFmData(username, apiKey) {
 	const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=1&_=${Date.now()}`;
-
 	try {
 		const response = await fetch(url);
-
 		if (!response.ok) {
 			const error = await response.json();
 			console.error("Last.fm API error:", error);
@@ -204,19 +151,14 @@ async function fetchLastFmData(username, apiKey) {
 			}
 			throw new Error("API_ERROR");
 		}
-
 		const data = await response.json();
-
 		if (!data.recenttracks || !data.recenttracks.track || data.recenttracks.track.length === 0) {
 			return null;
 		}
-
 		const track = data.recenttracks.track[0];
-
 		return {
 			title: track.name,
 			artist: track.artist["#text"],
-			album: track.album["#text"],
 			albumArt: track.image[3]["#text"] || "https://graybox.lol/img/lastfm/lastfm-album-placeholder.jpg",
 			isNowPlaying: !!track["@attr"]?.nowplaying
 		};
@@ -226,322 +168,259 @@ async function fetchLastFmData(username, apiKey) {
 	}
 }
 
-async function generateNowPlayingGIF(trackData, userData, customOptions = {}) {
-	const options = customOptions;
-	const {
-		colors,
-		fontSizes,
-		dimensions,
-		layout = {}
-	} = options;
-
-	const padding = 20;
-	const responsiveArtSize = Math.min(dimensions.artSize, dimensions.height - 2 * padding);
-	const responsiveFontScale = Math.min(1, dimensions.width / DEFAULT_DIMENSIONS.width);
-
-	const responsiveFontSizes = {
-		username: Math.round(fontSizes.username * responsiveFontScale),
-		status: Math.round(fontSizes.status * responsiveFontScale),
-		title: Math.round(fontSizes.title * responsiveFontScale),
-		artist: Math.round(fontSizes.artist * responsiveFontScale),
-		album: Math.round(fontSizes.album * responsiveFontScale)
-	};
-
-	const artSize = responsiveArtSize;
-	const artX = padding;
-	const artY = (dimensions.height - artSize) / 2;
-
-	const textX = artX + artSize + padding;
-	const textWidth = dimensions.width - textX - padding;
-	const textStartY = padding + (layout.hideStatus ? 0 : 40 * responsiveFontScale);
-
-	const profileSize = Math.max(24, Math.round(34 * responsiveFontScale));
-	const profileX = dimensions.width - profileSize - padding;
-	const profileY = padding;
-
-	const statusText = trackData.isNowPlaying ? "CURRENTLY PLAYING" : "RECENTLY PLAYED";
-	const statusTextWidth = statusText.length * (responsiveFontSizes.status * 0.6);
-	const statusTextY = textStartY - 20;
-
-	const encoder = new GIFEncoder(dimensions.width, dimensions.height);
-	encoder.start();
-	encoder.setRepeat(0);
-	encoder.setDelay(100);
-	encoder.setTransparent(true);
-
-	const canvas = createCanvas(dimensions.width, dimensions.height);
-	const ctx = canvas.getContext('2d');
-
-	const frames = trackData.isNowPlaying ? 20 : 1;
-
-	for (let frame = 0; frame < frames; frame++) {
-		ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-		
-		applyCardStyleCanvas(ctx, dimensions, colors, layout, padding);
-
-		if (userData && userData.profileImage && !layout.hideProfile) {
-			const profileImg = await loadImage(userData.profileImage);
-			ctx.save();
-			roundRect(ctx, profileX, profileY, profileSize, profileSize, 6);
-			ctx.clip();
-			ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
-			ctx.restore();
-
-			ctx.fillStyle = colors.primary;
-			ctx.font = `${responsiveFontSizes.username}px Roboto Mono`;
-			ctx.textAlign = 'right';
-			ctx.fillText(userData.username, profileX - 8, profileY + profileSize / 2 + 5);
-		}
-
-		const albumImg = await loadImage(trackData.albumArt);
+function drawTextWithFadeOut(ctx, text, x, y, maxWidth, color, fadeWidth) {
+	const textWidth = ctx.measureText(text).width;
+	if (textWidth <= maxWidth) {
+		ctx.fillStyle = color;
+		ctx.fillText(text, x, y);
+		return;
+	}
+	const visibleWidth = maxWidth - fadeWidth;
+	let r, g, b, baseAlpha = 1;
+	if (color.startsWith('#')) {
+		const hex = color.replace('#', '');
+		r = parseInt(hex.substr(0, 2), 16);
+		g = parseInt(hex.substr(2, 2), 16);
+		b = parseInt(hex.substr(4, 2), 16);
+	} else if (color.startsWith('rgba')) {
+		const values = color.match(/rgba?\(([^)]+)\)/)[1].split(',');
+		r = parseInt(values[0].trim());
+		g = parseInt(values[1].trim());
+		b = parseInt(values[2].trim());
+		baseAlpha = values[3] ? parseFloat(values[3].trim()) : 1;
+	} else if (color.startsWith('rgb')) {
+		const values = color.match(/rgb?\(([^)]+)\)/)[1].split(',');
+		r = parseInt(values[0].trim());
+		g = parseInt(values[1].trim());
+		b = parseInt(values[2].trim());
+	} else {
+		r = 255;
+		g = 255;
+		b = 255;
+	}
+	const fontSize = parseInt(ctx.font.match(/\d+/)[0]);
+	const fontHeight = fontSize * 1.2;
+	ctx.save();
+	ctx.rect(x, y - fontSize, visibleWidth, fontHeight);
+	ctx.clip();
+	ctx.fillStyle = color;
+	ctx.fillText(text, x, y);
+	ctx.restore();
+	const fadeSteps = Math.max(10, Math.round(20 * (fadeWidth / 60)));
+	const stepWidth = fadeWidth / fadeSteps;
+	for (let i = 0; i < fadeSteps; i++) {
+		const stepX = x + visibleWidth + (i * stepWidth);
+		const opacity = baseAlpha * (1 - (i / fadeSteps));
 		ctx.save();
-		applyArtStyleCanvas(ctx, artX, artY, artSize, layout.cardStyle);
+		ctx.rect(stepX, y - fontSize, stepWidth + 1, fontHeight);
 		ctx.clip();
-		ctx.drawImage(albumImg, artX, artY, artSize, artSize);
+		ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+		ctx.fillText(text, x, y);
 		ctx.restore();
-
-		if (!layout.hideStatus) {
-			ctx.fillStyle = trackData.isNowPlaying ? colors.playing : colors.recently;
-			ctx.font = `bold ${responsiveFontSizes.status}px Roboto Mono`;
-			ctx.textAlign = 'left';
-			ctx.fillText(statusText, textX, statusTextY);
-
-			ctx.fillRect(textX, statusTextY + 6, statusTextWidth, 3);
-
-			if (trackData.isNowPlaying) {
-				const barsX = textX + statusTextWidth + 20;
-				const barWidth = 4;
-				const barSpacing = 2;
-				const progress = frame / frames;
-
-				const bar1Height = 20 * (0.5 + 0.5 * Math.sin(progress * Math.PI * 4));
-				const bar2Height = 15 * (0.5 + 0.5 * Math.sin(progress * Math.PI * 4 + 0.4));
-				const bar3Height = 10 * (0.5 + 0.5 * Math.sin(progress * Math.PI * 4 + 0.8));
-
-				ctx.fillStyle = colors.playing;
-				ctx.fillRect(barsX, statusTextY - bar1Height, barWidth, bar1Height);
-				ctx.fillRect(barsX + barWidth + barSpacing, statusTextY - bar2Height, barWidth, bar2Height);
-				ctx.fillRect(barsX + 2 * (barWidth + barSpacing), statusTextY - bar3Height, barWidth, bar3Height);
-			}
-		}
-
-		ctx.fillStyle = colors.primary;
-		ctx.font = `bold ${responsiveFontSizes.title}px Roboto Mono`;
-		ctx.textAlign = 'left';
-		ctx.fillText(truncateText(trackData.title, textWidth, responsiveFontSizes.title), textX, textStartY + 20);
-
-		ctx.fillStyle = colors.secondary;
-		ctx.font = `${responsiveFontSizes.artist}px Roboto Mono`;
-		ctx.fillText(truncateText(trackData.artist, textWidth, responsiveFontSizes.artist), textX, textStartY + 55);
-
-		if (trackData.album && !layout.hideAlbum) {
-			ctx.font = `${responsiveFontSizes.album}px Roboto Mono`;
-			ctx.fillText(truncateText(trackData.album, textWidth, responsiveFontSizes.album), textX, textStartY + 85);
-		}
-
-		encoder.addFrame(ctx);
 	}
-
-	encoder.finish();
-	return encoder.out.getData();
 }
-
-function generateFallbackGIF(message, submessage = null, userData = null, customOptions = {}) {
-	const options = customOptions;
+async function generateNowPlayingPNG(trackData, userData, customOptions = {}) {
 	const {
-		colors,
-		fontSizes,
 		dimensions,
-		layout = {}
-	} = options;
-
-	const responsiveFontScale = Math.min(1, dimensions.width / DEFAULT_DIMENSIONS.width);
-	const mainFontSize = Math.round(26 * responsiveFontScale);
-	const subFontSize = Math.round(16 * responsiveFontScale);
-
-	const encoder = new GIFEncoder(dimensions.width, dimensions.height);
-	encoder.start();
-	encoder.setRepeat(0);
-	encoder.setDelay(1000);
-	encoder.setTransparent(true);
-
+		responsiveElements
+	} = customOptions;
+	const {
+		fontSizes,
+		padding,
+		topBarHeight,
+		profileSize,
+		waveBarWidth,
+		waveBarSpacing,
+		waveMaxHeight,
+		fadeWidth
+	} = responsiveElements;
 	const canvas = createCanvas(dimensions.width, dimensions.height);
 	const ctx = canvas.getContext('2d');
-	ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-
-	applyCardStyleCanvas(ctx, dimensions, colors, layout);
-
-	ctx.fillStyle = colors.secondary;
-	ctx.font = `${mainFontSize}px Roboto Mono`;
-	ctx.textAlign = 'center';
-	ctx.fillText(message, dimensions.width / 2, dimensions.height / 2);
-
-	if (submessage) {
-		ctx.font = `${subFontSize}px Roboto Mono`;
-		ctx.fillText(submessage, dimensions.width / 2, dimensions.height / 2 + 30);
+	const albumImg = await loadImage(trackData.albumArt);
+	let profileImg = null;
+	if (userData && userData.profileImage) {
+		try {
+			profileImg = await loadImage(userData.profileImage);
+		} catch (err) {
+			console.warn('Failed to load profile image:', err);
+			profileImg = null;
+		}
 	}
-
-	encoder.addFrame(ctx);
-	encoder.finish();
-	return encoder.out.getData();
+	ctx.drawImage(albumImg, 0, 0, dimensions.width, dimensions.height);
+	ctx.fillStyle = COLORS.overlay;
+	ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+	ctx.fillStyle = COLORS.topBar;
+	ctx.fillRect(0, 0, dimensions.width, topBarHeight);
+	const statusText = trackData.isNowPlaying ? "NOW PLAYING" : "LAST PLAYED";
+	const statusColor = trackData.isNowPlaying ? COLORS.playing : COLORS.recently;
+	ctx.fillStyle = statusColor;
+	ctx.font = `bold ${fontSizes.status}px RobotoMono`;
+	ctx.textAlign = 'left';
+	const statusY = topBarHeight / 2 + (fontSizes.status / 3);
+	ctx.fillText(statusText, padding, statusY);
+	if (trackData.isNowPlaying) {
+		const dotX = padding + ctx.measureText(statusText).width + Math.round(8 * responsiveElements.scale);
+		const dotRadius = Math.max(2, Math.round(4 * responsiveElements.scale));
+		ctx.fillStyle = statusColor;
+		ctx.beginPath();
+		ctx.arc(dotX, topBarHeight / 2, dotRadius, 0, 2 * Math.PI);
+		ctx.fill();
+	}
+	if (userData && profileImg) {
+		const profileX = dimensions.width - profileSize - padding;
+		const profileY = (topBarHeight - profileSize) / 2;
+		ctx.save();
+		ctx.beginPath();
+		ctx.arc(profileX + profileSize / 2, profileY + profileSize / 2, profileSize / 2, 0, 2 * Math.PI);
+		ctx.clip();
+		ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
+		ctx.restore();
+		ctx.fillStyle = COLORS.secondary;
+		ctx.font = `${fontSizes.username}px RobotoMono`;
+		ctx.textAlign = 'right';
+		const usernameY = topBarHeight / 2 + (fontSizes.username / 3);
+		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), usernameY);
+	} else if (userData) {
+		ctx.fillStyle = COLORS.secondary;
+		ctx.font = `${fontSizes.username}px RobotoMono`;
+		ctx.textAlign = 'right';
+		const usernameY = topBarHeight / 2 + (fontSizes.username / 3);
+		ctx.fillText(userData.username, dimensions.width - padding, usernameY);
+	}
+	const contentY = topBarHeight + padding;
+	const titleY = contentY + fontSizes.title;
+	const artistY = titleY + fontSizes.artist + Math.round(padding * 0.75);
+	const maxTextWidth = dimensions.width - (padding * 2);
+	ctx.font = `bold ${fontSizes.title}px RobotoMono`;
+	ctx.textAlign = 'left';
+	drawTextWithFadeOut(ctx, trackData.title, padding, titleY, maxTextWidth, COLORS.primary, fadeWidth);
+	ctx.font = `${fontSizes.artist}px RobotoMono`;
+	drawTextWithFadeOut(ctx, trackData.artist, padding, artistY, maxTextWidth, COLORS.secondary, fadeWidth);
+	if (trackData.isNowPlaying) {
+		const waveBottomMargin = Math.round(padding * 1.25);
+		const waveY = dimensions.height - waveBottomMargin;
+		const totalWaveWidth = (waveBarWidth + waveBarSpacing) * 5 - waveBarSpacing;
+		const waveX = dimensions.width - totalWaveWidth - padding;
+		ctx.fillStyle = COLORS.playing;
+		const barHeights = [
+			Math.round(waveMaxHeight * 0.8),
+			Math.round(waveMaxHeight * 0.53),
+			waveMaxHeight,
+			Math.round(waveMaxHeight * 0.4),
+			Math.round(waveMaxHeight * 0.67)
+		];
+		for (let i = 0; i < 5; i++) {
+			const barX = waveX + i * (waveBarWidth + waveBarSpacing);
+			const barHeight = barHeights[i];
+			ctx.fillRect(barX, waveY - barHeight, waveBarWidth, barHeight);
+		}
+	}
+	return canvas.toBuffer('image/png');
 }
 
-function applyCardStyleCanvas(ctx, dimensions, colors, layout, padding = 20) {
+function generateFallbackPNG(message, submessage = null, customOptions = {}) {
 	const {
-		width,
-		height
-	} = dimensions;
-	const cornerRadius = layout.cornerRadius !== undefined ? layout.cornerRadius :
-		layout.cardStyle === CARD_STYLES.BOX ? 0 : 16;
-
-	ctx.fillStyle = colors.cardBg;
-
-	switch (layout.cardStyle) {
-		case CARD_STYLES.BOX:
-			ctx.fillRect(padding / 2, padding / 2, width - padding, height - padding);
-			break;
-
-		case CARD_STYLES.CIRCLE:
-			const centerX = width / 2;
-			const centerY = height / 2;
-			const radius = Math.min(width, height) * 0.45;
-			ctx.beginPath();
-			ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-			ctx.fill();
-			break;
-
-		case CARD_STYLES.MODERN:
-		case CARD_STYLES.NEOMORPH:
-		default:
-			roundRect(ctx, padding / 2, padding / 2, width - padding, height - padding, cornerRadius);
-			ctx.fill();
-			break;
+		dimensions,
+		responsiveElements
+	} = customOptions;
+	const {
+		fontSizes,
+		padding
+	} = responsiveElements;
+	const canvas = createCanvas(dimensions.width, dimensions.height);
+	const ctx = canvas.getContext('2d');
+	const gradient = ctx.createLinearGradient(0, 0, dimensions.width, dimensions.height);
+	gradient.addColorStop(0, '#1a1a1a');
+	gradient.addColorStop(1, '#0d0d0d');
+	ctx.fillStyle = gradient;
+	ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+	const mainFontSize = Math.max(12, Math.round(16 * responsiveElements.scale));
+	const subFontSize = Math.max(10, Math.round(12 * responsiveElements.scale));
+	ctx.fillStyle = COLORS.secondary;
+	ctx.font = `bold ${mainFontSize}px RobotoMono`;
+	ctx.textAlign = 'center';
+	ctx.fillText(message, dimensions.width / 2, dimensions.height / 2 - (submessage ? 10 : 0));
+	if (submessage) {
+		ctx.fillStyle = COLORS.secondary;
+		ctx.font = `${subFontSize}px RobotoMono`;
+		ctx.fillText(submessage, dimensions.width / 2, dimensions.height / 2 + 15);
 	}
+	return canvas.toBuffer('image/png');
 }
-
-function applyArtStyleCanvas(ctx, x, y, size, style) {
-	switch (style) {
-		case CARD_STYLES.CIRCLE:
-			ctx.beginPath();
-			ctx.arc(x + size / 2, y + size / 2, size / 2, 0, 2 * Math.PI);
-			break;
-
-		case CARD_STYLES.MODERN:
-			roundRect(ctx, x, y, size, size, 8);
-			break;
-
-		case CARD_STYLES.NEOMORPH:
-			roundRect(ctx, x, y, size, size, 15);
-			break;
-
-		default:
-			roundRect(ctx, x, y, size, size, 10);
-			break;
-	}
-}
-
-function roundRect(ctx, x, y, width, height, radius) {
-	ctx.beginPath();
-	ctx.moveTo(x + radius, y);
-	ctx.lineTo(x + width - radius, y);
-	ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-	ctx.lineTo(x + width, y + height - radius);
-	ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-	ctx.lineTo(x + radius, y + height);
-	ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-	ctx.lineTo(x, y + radius);
-	ctx.quadraticCurveTo(x, y, x + radius, y);
-	ctx.closePath();
-}
-
 async function loadImage(url) {
 	const response = await fetch(url);
 	const buffer = await response.buffer();
-	const { loadImage } = require('canvas');
+	const {
+		loadImage
+	} = require('canvas');
 	return loadImage(buffer);
 }
-
 export default async function handler(req, res) {
 	console.log(`API request received: ${req.method} ${req.url}`);
-
 	const username = req.query.username;
 	const apiKey = process.env.api;
 	const customOptions = parseCustomOptions(req.query);
-
 	if (!apiKey) {
 		console.error("missing Last.fm API key");
 		return res.status(500).send("server configuration error");
 	}
-
 	if (!username) {
-		const noUserGIF = await generateFallbackGIF(
-			"Hai! you need to put a user..",
-			"Example: '?username=Squirre1Z'",
-			null,
+		const noUserPNG = generateFallbackPNG(
+			"hey! you need to add a username",
+			"example: ?username=Squirre1Z",
 			customOptions
 		);
-		res.setHeader("Content-Type", "image/gif");
+		res.setHeader("Content-Type", "image/png");
 		res.setHeader("Cache-Control", "public, max-age=60");
-		return res.send(noUserGIF);
+		return res.send(noUserPNG);
 	}
-
 	try {
 		const randomId = crypto.randomBytes(4).toString('hex');
 		const userData = await fetchUserData(username, apiKey);
 		const trackData = await fetchLastFmData(username, apiKey);
-
 		if (!trackData || (!trackData.title && !trackData.artist)) {
 			console.warn("no track data received from Last.fm, displaying fallback");
-			const emptyGIF = await generateFallbackGIF(
-				"no track data found..",
+			const emptyPNG = generateFallbackPNG(
+				"no recent tracks found",
 				null,
-				userData,
 				customOptions
 			);
-			res.setHeader("Content-Type", "image/gif");
+			res.setHeader("Content-Type", "image/png");
 			res.setHeader("Cache-Control", "public, max-age=30");
-			return res.send(emptyGIF);
+			return res.send(emptyPNG);
 		}
-		const gifContent = await generateNowPlayingGIF(trackData, userData, customOptions);
-
-		res.setHeader("Content-Type", "image/gif");
+		const pngContent = await generateNowPlayingPNG(trackData, userData, customOptions);
+		res.setHeader("Content-Type", "image/png");
 		res.setHeader("Cache-Control", "public, max-age=30");
-
 		if (!req.query.rid) {
 			const protocol = req.headers['x-forwarded-proto'] || 'http';
 			const host = req.headers.host;
 			const baseUrl = `${protocol}://${host}${req.url}`;
 			const separator = req.url.includes('?') ? '&' : '?';
 			const redirectUrl = `${baseUrl}${separator}rid=${randomId}`;
-
 			res.setHeader("Location", redirectUrl);
 			return res.status(302).send("redirecting to unique URL");
 		}
-
-		return res.send(gifContent);
-
+		return res.send(pngContent);
 	} catch (error) {
 		console.error("error generating now playing card:", error);
 		if (error.message === "NOT_FOUND") {
-			const notFoundGIF = generateFallbackGIF(
-				`user '${username}' not found..`,
-				null,
+			const notFoundPNG = generateFallbackPNG(
+				`user '${username}' not found`,
 				null,
 				customOptions
 			);
-			res.setHeader("Content-Type", "image/gif");
+			res.setHeader("Content-Type", "image/png");
 			res.setHeader("Cache-Control", "public, max-age=60");
-			return res.status(404).send(notFoundGIF);
+			return res.status(404).send(notFoundPNG);
 		}
-
-		const errorGIF = generateFallbackGIF(
+		const errorPNG = generateFallbackPNG(
 			"error fetching data",
-			null,
 			null,
 			customOptions
 		);
-		res.setHeader("Content-Type", "image/gif");
+		res.setHeader("Content-Type", "image/png");
 		res.setHeader("Cache-Control", "public, max-age=10");
-		return res.status(500).send(errorGIF);
+		return res.status(500).send(errorPNG);
 	}
 }
