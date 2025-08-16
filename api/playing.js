@@ -298,7 +298,7 @@ function generateFallback(message, submessage = null, customOptions = {}) {
 	const mainFontSize = Math.max(12, Math.round(16 * responsiveElements.scale));
 	const subFontSize = Math.max(10, Math.round(12 * responsiveElements.scale));
 	ctx.fillStyle = COLORS.secondary;
-	ctx.font = `bold ${mainFontSize}px RobotoMono`;
+	ctx.font = `${mainFontSize}px RobotoMono`;
 	ctx.textAlign = 'center';
 	ctx.fillText(message, dimensions.width / 2, dimensions.height / 2 - (submessage ? 10 : 0));
 	if (submessage) {
