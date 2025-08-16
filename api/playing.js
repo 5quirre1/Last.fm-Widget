@@ -57,7 +57,7 @@ const DEFAULT_DIMENSIONS = {
 	height: 168
 };
 
-function calculateResponsiveElements(width, height) {
+function calculateRElements(width, height) {
 	const widthScale = width / DEFAULT_DIMENSIONS.width;
 	const heightScale = height / DEFAULT_DIMENSIONS.height;
 	const scale = Math.min(widthScale, heightScale);
@@ -90,7 +90,7 @@ function calculateResponsiveElements(width, height) {
 	};
 }
 
-function parseCustomOptions(query) {
+function parseOptions(query) {
 	let dimensions = {
 		...DEFAULT_DIMENSIONS
 	};
@@ -100,7 +100,7 @@ function parseCustomOptions(query) {
 	if (query.height) {
 		dimensions.height = parseInt(query.height);
 	}
-	const responsiveElements = calculateResponsiveElements(dimensions.width, dimensions.height);
+	const responsiveElements = calculateRElements(dimensions.width, dimensions.height);
 	return {
 		dimensions,
 		responsiveElements
@@ -128,7 +128,7 @@ async function fetchUserData(username, apiKey) {
 		throw error;
 	}
 }
-async function fetchLastFmData(username, apiKey) {
+async function fetchFmData(username, apiKey) {
 	const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=1&_=${Date.now()}`;
 	try {
 		const response = await fetch(url);
@@ -157,7 +157,7 @@ async function fetchLastFmData(username, apiKey) {
 	}
 }
 
-function drawTextWithFadeOut(ctx, text, x, y, maxWidth, color, fadeWidth) {
+function DrawTheText(ctx, text, x, y, maxWidth, color, fadeWidth) {
 	const textWidth = ctx.measureText(text).width;
 	if (textWidth <= maxWidth) {
 		ctx.fillStyle = color;
@@ -208,7 +208,7 @@ function drawTextWithFadeOut(ctx, text, x, y, maxWidth, color, fadeWidth) {
 		ctx.restore();
 	}
 }
-async function generateNowPlayingPNG(trackData, userData, customOptions = {}) {
+async function generateTheMainThing(trackData, userData, customOptions = {}) {
 	const {
 		dimensions,
 		responsiveElements
@@ -296,9 +296,9 @@ async function generateNowPlayingPNG(trackData, userData, customOptions = {}) {
 	const maxTextWidth = dimensions.width - (padding * 2);
 	ctx.font = `bold ${fontSizes.title}px RobotoMono`;
 	ctx.textAlign = 'left';
-	drawTextWithFadeOut(ctx, trackData.title, padding, titleY, maxTextWidth, COLORS.primary, fadeWidth);
+	DrawTheText(ctx, trackData.title, padding, titleY, maxTextWidth, COLORS.primary, fadeWidth);
 	ctx.font = `${fontSizes.artist}px RobotoMono`;
-	drawTextWithFadeOut(ctx, trackData.artist, padding, artistY, maxTextWidth, COLORS.secondary, fadeWidth);
+	DrawTheText(ctx, trackData.artist, padding, artistY, maxTextWidth, COLORS.secondary, fadeWidth);
 	if (trackData.isNowPlaying) {
 		const waveBottomMargin = Math.round(padding * 1.25);
 		const waveY = dimensions.height - waveBottomMargin;
@@ -321,7 +321,7 @@ async function generateNowPlayingPNG(trackData, userData, customOptions = {}) {
 	return canvas.toBuffer('image/png');
 }
 
-function generateFallbackPNG(message, submessage = null, customOptions = {}) {
+function generateFallback(message, submessage = null, customOptions = {}) {
 	const {
 		dimensions,
 		responsiveElements
@@ -362,13 +362,13 @@ export default async function handler(req, res) {
 	console.log(`API request received: ${req.method} ${req.url}`);
 	const username = req.query.username;
 	const apiKey = process.env.api;
-	const customOptions = parseCustomOptions(req.query);
+	const customOptions = parseOptions(req.query);
 	if (!apiKey) {
 		console.error("missing Last.fm API key");
 		return res.status(500).send("server configuration error");
 	}
 	if (!username) {
-		const noUserPNG = generateFallbackPNG(
+		const noUserPNG = generateFallback(
 			"hey! you need to add a username",
 			"example: ?username=Squirre1Z",
 			customOptions
@@ -380,10 +380,10 @@ export default async function handler(req, res) {
 	try {
 		const randomId = crypto.randomBytes(4).toString('hex');
 		const userData = await fetchUserData(username, apiKey);
-		const trackData = await fetchLastFmData(username, apiKey);
+		const trackData = await fetchFmData(username, apiKey);
 		if (!trackData || (!trackData.title && !trackData.artist)) {
 			console.warn("no track data received from Last.fm, displaying fallback");
-			const emptyPNG = generateFallbackPNG(
+			const emptyPNG = generateFallback(
 				"no recent tracks found",
 				null,
 				customOptions
@@ -392,7 +392,7 @@ export default async function handler(req, res) {
 			res.setHeader("Cache-Control", "public, max-age=30");
 			return res.send(emptyPNG);
 		}
-		const pngContent = await generateNowPlayingPNG(trackData, userData, customOptions);
+		const pngContent = await generateTheMainThing(trackData, userData, customOptions);
 		res.setHeader("Content-Type", "image/png");
 		res.setHeader("Cache-Control", "public, max-age=30");
 		if (!req.query.rid) {
@@ -408,7 +408,7 @@ export default async function handler(req, res) {
 	} catch (error) {
 		console.error("error generating now playing card:", error);
 		if (error.message === "NOT_FOUND") {
-			const notFoundPNG = generateFallbackPNG(
+			const notFoundPNG = generateFallback(
 				`user '${username}' not found`,
 				null,
 				customOptions
@@ -417,7 +417,7 @@ export default async function handler(req, res) {
 			res.setHeader("Cache-Control", "public, max-age=60");
 			return res.status(404).send(notFoundPNG);
 		}
-		const errorPNG = generateFallbackPNG(
+		const errorPNG = generateFallback(
 			"error fetching data",
 			null,
 			customOptions
