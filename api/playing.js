@@ -253,11 +253,6 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 	ctx.font = `bold ${fontSizes.status}px RobotoMono`;
 	ctx.textAlign = 'left';
 	ctx.fillText(statusText, padding, firstRowY);
-	if (trackData.isNowPlaying) {
-		ctx.fillStyle = statusColor;
-		ctx.beginPath();
-		ctx.fill();
-	}
 	const profileX = dimensions.width - profileSize - padding;
 	const profileY = firstRowY - (fontSizes.status * 0.8) - (profileSize / 2) + (fontSizes.username / 3);
 	if (userData && profileImg) {
@@ -268,12 +263,12 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
 		ctx.restore();
 		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
+		ctx.font = `${fontSizes.artist}px RobotoMono`;
 		ctx.textAlign = 'right';
 		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), firstRowY);
 	} else if (userData) {
 		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
+		ctx.font = `${fontSizes.artist}px RobotoMono`;
 		ctx.textAlign = 'right';
 		ctx.fillText(userData.username, dimensions.width - padding, firstRowY);
 	}
@@ -293,10 +288,6 @@ function generateFallback(message, submessage = null, customOptions = {}) {
 		dimensions,
 		responsiveElements
 	} = customOptions;
-	const {
-		fontSizes,
-		padding
-	} = responsiveElements;
 	const canvas = createCanvas(dimensions.width, dimensions.height);
 	const ctx = canvas.getContext('2d');
 	const gradient = ctx.createLinearGradient(0, 0, dimensions.width, dimensions.height);
