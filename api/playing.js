@@ -53,8 +53,8 @@ const COLORS = {
 	recently: "#FF6B6B"
 };
 const DEFAULT_DIMENSIONS = {
-	width: 149,
-	height: 149
+	width: 180,
+	height: 168
 };
 
 function calculateResponsiveElements(width, height) {
