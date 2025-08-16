@@ -45,7 +45,7 @@ registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
 });
 const COLORS = {
 	background: "transparent",
-	overlay: "rgba(0, 0, 0, 0.61)",
+	overlay: "rgba(0, 0, 0, 0.34)",
 	topBar: "rgba(0, 0, 0, 0.8)",
 	primary: "#FFFFFF",
 	secondary: "#E0E0E0",
