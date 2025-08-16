@@ -54,7 +54,7 @@ const COLORS = {
 };
 const DEFAULT_DIMENSIONS = {
 	width: 149,
-	height: 250
+	height: 149
 };
 
 function calculateResponsiveElements(width, height) {
