@@ -1,33 +1,33 @@
 /*
- *  ================================================
- *           CODE BY SQUIRREL GAY ACORNS!!
- *  =================================================
- *        Give credit if you steal my code sob
- *  =================================================
+ *  ================================================
+ *           CODE BY SQUIRREL GAY ACORNS!!
+ *  =================================================
+ *        Give credit if you steal my code sob
+ *  =================================================
  *
- *  /////////////////////////////////////////////////////////////////////////////
- *  MIT License
- *  
- *  Copyright (c) 2025 Squirrel
- *  
- *  Permission is hereby granted, free of charge, to any person obtaining a copy
- *  of this software and associated documentation files (the "Software"), to deal
- *  in the Software without restriction, including without limitation the rights
- *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- *  copies of the Software, and to permit persons to whom the Software is
- *  furnished to do so, subject to the following conditions:
- *  
- *  The above copyright notice and this permission notice shall be included in all
- *  copies or substantial portions of the Software.
- *  
- *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.
- *  /////////////////////////////////////////////////////////////////////////////
+ *  /////////////////////////////////////////////////////////////////////////////
+ *  MIT License
+ *  
+ *  Copyright (c) 2025 Squirrel
+ *  
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *  
+ *  The above copyright notice and this permission notice shall be included in all
+ *  copies or substantial portions of the Software.
+ *  
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *  SOFTWARE.
+ *  /////////////////////////////////////////////////////////////////////////////
  */
 const fetch = require("node-fetch");
 const crypto = require("crypto");
@@ -45,7 +45,7 @@ registerFont(path.join(__dirname, "fonts", "RobotoMono-Regular.ttf"), {
 });
 const COLORS = {
 	background: "transparent",
-	overlay: "rgba(0, 0, 0, 0.41)",
+	overlay: "rgba(0, 0, 0, 0.61)",
 	topBar: "rgba(0, 0, 0, 0.8)",
 	primary: "#FFFFFF",
 	secondary: "#E0E0E0",
@@ -67,11 +67,11 @@ function calculateRElements(width, height) {
 	const fontSizes = {
 		username: Math.max(8, Math.round(11 * finalScale)),
 		status: Math.max(7, Math.round(10 * finalScale)),
-		title: Math.max(12, Math.round(18 * finalScale)),
+		title: Math.max(10, Math.round(14 * finalScale)),
 		artist: Math.max(10, Math.round(14 * finalScale))
 	};
 	const padding = Math.max(8, Math.round(16 * finalScale));
-	const topBarHeight = Math.max(24, Math.round(32 * finalScale));
+	const topBarHeight = Math.round(padding * 2 + fontSizes.status + fontSizes.artist + padding * 1.5);
 	const profileSize = Math.max(16, Math.round(24 * finalScale));
 	const waveBarWidth = Math.max(2, Math.round(3 * finalScale));
 	const waveBarSpacing = Math.max(2, Math.round(3 * finalScale));
@@ -112,7 +112,6 @@ async function fetchUserData(username, apiKey) {
 		const response = await fetch(url);
 		if (!response.ok) {
 			const error = await response.json();
-			console.error("Last.fm API error:", error);
 			if (error?.error === 6) {
 				throw new Error("NOT_FOUND");
 			}
@@ -124,7 +123,6 @@ async function fetchUserData(username, apiKey) {
 			profileImage: data.user.image[2]["#text"]
 		};
 	} catch (error) {
-		console.error("error fetching user data from Last.fm:", error);
 		throw error;
 	}
 }
@@ -134,7 +132,6 @@ async function fetchFmData(username, apiKey) {
 		const response = await fetch(url);
 		if (!response.ok) {
 			const error = await response.json();
-			console.error("Last.fm API error:", error);
 			if (error?.error === 6) {
 				throw new Error("NOT_FOUND");
 			}
@@ -152,7 +149,6 @@ async function fetchFmData(username, apiKey) {
 			isNowPlaying: !!track["@attr"]?.nowplaying
 		};
 	} catch (error) {
-		console.error("error fetching from Last.fm:", error);
 		throw error;
 	}
 }
@@ -218,9 +214,6 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		padding,
 		topBarHeight,
 		profileSize,
-		waveBarWidth,
-		waveBarSpacing,
-		waveMaxHeight,
 		fadeWidth
 	} = responsiveElements;
 	const canvas = createCanvas(dimensions.width, dimensions.height);
@@ -231,7 +224,6 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		try {
 			profileImg = await loadImage(userData.profileImage);
 		} catch (err) {
-			console.warn('Failed to load profile image:', err);
 			profileImg = null;
 		}
 	}
@@ -250,28 +242,25 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		drawY = (dimensions.height - drawHeight) / 2;
 	}
 	ctx.drawImage(albumImg, drawX, drawY, drawWidth, drawHeight);
-	ctx.fillStyle = COLORS.overlay;
-	ctx.fillRect(0, 0, dimensions.width, dimensions.height);
 	ctx.fillStyle = COLORS.topBar;
 	ctx.fillRect(0, 0, dimensions.width, topBarHeight);
+	ctx.fillStyle = COLORS.overlay;
+	ctx.fillRect(0, topBarHeight, dimensions.width, dimensions.height - topBarHeight);
+	const firstRowY = padding + (fontSizes.status * 0.7);
 	const statusText = trackData.isNowPlaying ? "NOW PLAYING" : "LAST PLAYED";
 	const statusColor = trackData.isNowPlaying ? COLORS.playing : COLORS.recently;
 	ctx.fillStyle = statusColor;
 	ctx.font = `bold ${fontSizes.status}px RobotoMono`;
 	ctx.textAlign = 'left';
-	const statusY = topBarHeight / 2 + (fontSizes.status / 3);
-	ctx.fillText(statusText, padding, statusY);
+	ctx.fillText(statusText, padding, firstRowY);
 	if (trackData.isNowPlaying) {
-		const dotX = padding + ctx.measureText(statusText).width + Math.round(8 * responsiveElements.scale);
-		const dotRadius = Math.max(2, Math.round(4 * responsiveElements.scale));
 		ctx.fillStyle = statusColor;
 		ctx.beginPath();
-		ctx.arc(dotX, topBarHeight / 2, dotRadius, 0, 2 * Math.PI);
 		ctx.fill();
 	}
+	const profileX = dimensions.width - profileSize - padding;
+	const profileY = firstRowY - (fontSizes.status * 0.8) - (profileSize / 2) + (fontSizes.username / 3);
 	if (userData && profileImg) {
-		const profileX = dimensions.width - profileSize - padding;
-		const profileY = (topBarHeight - profileSize) / 2;
 		ctx.save();
 		ctx.beginPath();
 		ctx.arc(profileX + profileSize / 2, profileY + profileSize / 2, profileSize / 2, 0, 2 * Math.PI);
@@ -281,43 +270,21 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		ctx.fillStyle = COLORS.secondary;
 		ctx.font = `${fontSizes.username}px RobotoMono`;
 		ctx.textAlign = 'right';
-		const usernameY = topBarHeight / 2 + (fontSizes.username / 3);
-		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), usernameY);
+		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), firstRowY);
 	} else if (userData) {
 		ctx.fillStyle = COLORS.secondary;
 		ctx.font = `${fontSizes.username}px RobotoMono`;
 		ctx.textAlign = 'right';
-		const usernameY = topBarHeight / 2 + (fontSizes.username / 3);
-		ctx.fillText(userData.username, dimensions.width - padding, usernameY);
+		ctx.fillText(userData.username, dimensions.width - padding, firstRowY);
 	}
-	const contentY = topBarHeight + padding;
-	const titleY = contentY + fontSizes.title;
-	const artistY = titleY + fontSizes.artist + Math.round(padding * 0.75);
-	const maxTextWidth = dimensions.width - (padding * 2);
-	ctx.font = `bold ${fontSizes.title}px RobotoMono`;
+	const titleY = firstRowY + fontSizes.status + (padding / 2);
+	const artistY = titleY + fontSizes.title + (padding / 4);
+	const maxTitleArtistWidth = dimensions.width - (padding * 2);
+	ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
 	ctx.textAlign = 'left';
-	DrawTheText(ctx, trackData.title, padding, titleY, maxTextWidth, COLORS.primary, fadeWidth);
+	DrawTheText(ctx, trackData.title, padding, titleY, maxTitleArtistWidth, COLORS.primary, fadeWidth);
 	ctx.font = `${fontSizes.artist}px RobotoMono`;
-	DrawTheText(ctx, trackData.artist, padding, artistY, maxTextWidth, COLORS.secondary, fadeWidth);
-	if (trackData.isNowPlaying) {
-		const waveBottomMargin = Math.round(padding * 1.25);
-		const waveY = dimensions.height - waveBottomMargin;
-		const totalWaveWidth = (waveBarWidth + waveBarSpacing) * 5 - waveBarSpacing;
-		const waveX = dimensions.width - totalWaveWidth - padding;
-		ctx.fillStyle = COLORS.playing;
-		const barHeights = [
-			Math.round(waveMaxHeight * 0.8),
-			Math.round(waveMaxHeight * 0.53),
-			waveMaxHeight,
-			Math.round(waveMaxHeight * 0.4),
-			Math.round(waveMaxHeight * 0.67)
-		];
-		for (let i = 0; i < 5; i++) {
-			const barX = waveX + i * (waveBarWidth + waveBarSpacing);
-			const barHeight = barHeights[i];
-			ctx.fillRect(barX, waveY - barHeight, waveBarWidth, barHeight);
-		}
-	}
+	DrawTheText(ctx, trackData.artist, padding, artistY, maxTitleArtistWidth, COLORS.secondary, fadeWidth);
 	return canvas.toBuffer('image/png');
 }
 
@@ -359,12 +326,10 @@ async function loadImage(url) {
 	return loadImage(buffer);
 }
 export default async function handler(req, res) {
-	console.log(`API request received: ${req.method} ${req.url}`);
 	const username = req.query.username;
 	const apiKey = process.env.api;
 	const customOptions = parseOptions(req.query);
 	if (!apiKey) {
-		console.error("missing Last.fm API key");
 		return res.status(500).send("server configuration error");
 	}
 	if (!username) {
@@ -382,7 +347,6 @@ export default async function handler(req, res) {
 		const userData = await fetchUserData(username, apiKey);
 		const trackData = await fetchFmData(username, apiKey);
 		if (!trackData || (!trackData.title && !trackData.artist)) {
-			console.warn("no track data received from Last.fm, displaying fallback");
 			const emptyPNG = generateFallback(
 				"no recent tracks found",
 				null,
@@ -406,7 +370,6 @@ export default async function handler(req, res) {
 		}
 		return res.send(pngContent);
 	} catch (error) {
-		console.error("error generating now playing card:", error);
 		if (error.message === "NOT_FOUND") {
 			const notFoundPNG = generateFallback(
 				`user '${username}' not found`,
