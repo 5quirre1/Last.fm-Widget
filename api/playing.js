@@ -268,12 +268,12 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
 		ctx.restore();
 		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `${fontSizes.username}px RobotoMono`;
+		ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
 		ctx.textAlign = 'right';
 		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), firstRowY);
 	} else if (userData) {
 		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `${fontSizes.username}px RobotoMono`;
+		ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
 		ctx.textAlign = 'right';
 		ctx.fillText(userData.username, dimensions.width - padding, firstRowY);
 	}
@@ -283,7 +283,7 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 	ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
 	ctx.textAlign = 'left';
 	DrawTheText(ctx, trackData.title, padding, titleY, maxTitleArtistWidth, COLORS.primary, fadeWidth);
-	ctx.font = `${fontSizes.artist}px RobotoMono`;
+	ctx.font = `bold ${fontSizes.artist}px RobotoMono`;
 	DrawTheText(ctx, trackData.artist, padding, artistY, maxTitleArtistWidth, COLORS.secondary, fadeWidth);
 	return canvas.toBuffer('image/png');
 }
