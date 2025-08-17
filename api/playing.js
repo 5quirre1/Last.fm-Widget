@@ -1,33 +1,33 @@
 /*
- *  ================================================
- *           CODE BY SQUIRREL GAY ACORNS!!
- *  =================================================
- *        Give credit if you steal my code sob
- *  =================================================
+ *  ================================================
+ *           CODE BY SQUIRREL GAY ACORNS!!
+ *  =================================================
+ *        Give credit if you steal my code sob
+ *  =================================================
  *
- *  /////////////////////////////////////////////////////////////////////////////
- *  MIT License
- *  
- *  Copyright (c) 2025 Squirrel
- *  
- *  Permission is hereby granted, free of charge, to any person obtaining a copy
- *  of this software and associated documentation files (the "Software"), to deal
- *  in the Software without restriction, including without limitation the rights
- *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- *  copies of the Software, and to permit persons to whom the Software is
- *  furnished to do so, subject to the following conditions:
- *  
- *  The above copyright notice and this permission notice shall be included in all
- *  copies or substantial portions of the Software.
- *  
- *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *  SOFTWARE.
- *  /////////////////////////////////////////////////////////////////////////////
+ *  /////////////////////////////////////////////////////////////////////////////
+ *  MIT License
+ *  
+ *  Copyright (c) 2025 Squirrel
+ *  
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *  
+ *  The above copyright notice and this permission notice shall be included in all
+ *  copies or substantial portions of the Software.
+ *  
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *  SOFTWARE.
+ *  /////////////////////////////////////////////////////////////////////////////
  */
 const fetch = require("node-fetch");
 const crypto = require("crypto");
@@ -65,14 +65,12 @@ function calculateRElements(width, height) {
 	const maxScale = 2.0;
 	const finalScale = Math.max(minScale, Math.min(maxScale, scale));
 	const fontSizes = {
-		username: Math.max(8, Math.round(11 * finalScale)),
 		status: Math.max(7, Math.round(10 * finalScale)),
 		title: Math.max(10, Math.round(14 * finalScale)),
 		artist: Math.max(10, Math.round(14 * finalScale))
 	};
 	const padding = Math.max(8, Math.round(16 * finalScale));
 	const topBarHeight = Math.round(padding * 2 + fontSizes.status + fontSizes.artist + padding * 1.5);
-	const profileSize = Math.max(16, Math.round(24 * finalScale));
 	const waveBarWidth = Math.max(2, Math.round(3 * finalScale));
 	const waveBarSpacing = Math.max(2, Math.round(3 * finalScale));
 	const waveMaxHeight = Math.max(8, Math.round(15 * finalScale));
@@ -81,7 +79,6 @@ function calculateRElements(width, height) {
 		fontSizes,
 		padding,
 		topBarHeight,
-		profileSize,
 		scale: finalScale,
 		waveBarWidth,
 		waveBarSpacing,
@@ -105,26 +102,6 @@ function parseOptions(query) {
 		dimensions,
 		responsiveElements
 	};
-}
-async function fetchUserData(username, apiKey) {
-	const url = `https://ws.audioscrobbler.com/2.0/?method=user.getinfo&user=${username}&api_key=${apiKey}&format=json&_=${Date.now()}`;
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			const error = await response.json();
-			if (error?.error === 6) {
-				throw new Error("NOT_FOUND");
-			}
-			throw new Error("API_ERROR");
-		}
-		const data = await response.json();
-		return {
-			username: data.user.name,
-			profileImage: data.user.image[2]["#text"]
-		};
-	} catch (error) {
-		throw error;
-	}
 }
 async function fetchFmData(username, apiKey) {
 	const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${username}&api_key=${apiKey}&format=json&limit=1&_=${Date.now()}`;
@@ -204,7 +181,7 @@ function DrawTheText(ctx, text, x, y, maxWidth, color, fadeWidth) {
 		ctx.restore();
 	}
 }
-async function generateTheMainThing(trackData, userData, customOptions = {}) {
+async function generateTheMainThing(trackData, customOptions = {}) {
 	const {
 		dimensions,
 		responsiveElements
@@ -213,20 +190,11 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 		fontSizes,
 		padding,
 		topBarHeight,
-		profileSize,
 		fadeWidth
 	} = responsiveElements;
 	const canvas = createCanvas(dimensions.width, dimensions.height);
 	const ctx = canvas.getContext('2d');
 	const albumImg = await loadImage(trackData.albumArt);
-	let profileImg = null;
-	if (userData && userData.profileImage) {
-		try {
-			profileImg = await loadImage(userData.profileImage);
-		} catch (err) {
-			profileImg = null;
-		}
-	}
 	const albumAspectRatio = albumImg.width / albumImg.height;
 	const canvasAspectRatio = dimensions.width / dimensions.height;
 	let drawWidth, drawHeight, drawX, drawY;
@@ -253,25 +221,6 @@ async function generateTheMainThing(trackData, userData, customOptions = {}) {
 	ctx.font = `bold ${fontSizes.status}px RobotoMono`;
 	ctx.textAlign = 'left';
 	ctx.fillText(statusText, padding, firstRowY);
-	const profileX = dimensions.width - profileSize - padding;
-	const profileY = firstRowY - (fontSizes.status * 0.8) - (profileSize / 2) + (fontSizes.username / 3);
-	if (userData && profileImg) {
-		ctx.save();
-		ctx.beginPath();
-		ctx.arc(profileX + profileSize / 2, profileY + profileSize / 2, profileSize / 2, 0, 2 * Math.PI);
-		ctx.clip();
-		ctx.drawImage(profileImg, profileX, profileY, profileSize, profileSize);
-		ctx.restore();
-		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `${fontSizes.artist}px RobotoMono`;
-		ctx.textAlign = 'right';
-		ctx.fillText(userData.username, profileX - Math.round(8 * responsiveElements.scale), firstRowY);
-	} else if (userData) {
-		ctx.fillStyle = COLORS.secondary;
-		ctx.font = `${fontSizes.artist}px RobotoMono`;
-		ctx.textAlign = 'right';
-		ctx.fillText(userData.username, dimensions.width - padding, firstRowY);
-	}
 	const titleY = firstRowY + fontSizes.status + (padding / 2);
 	const artistY = titleY + fontSizes.title + (padding / 4);
 	const maxTitleArtistWidth = dimensions.width - (padding * 2);
@@ -335,7 +284,6 @@ export default async function handler(req, res) {
 	}
 	try {
 		const randomId = crypto.randomBytes(4).toString('hex');
-		const userData = await fetchUserData(username, apiKey);
 		const trackData = await fetchFmData(username, apiKey);
 		if (!trackData || (!trackData.title && !trackData.artist)) {
 			const emptyPNG = generateFallback(
@@ -347,7 +295,7 @@ export default async function handler(req, res) {
 			res.setHeader("Cache-Control", "public, max-age=30");
 			return res.send(emptyPNG);
 		}
-		const pngContent = await generateTheMainThing(trackData, userData, customOptions);
+		const pngContent = await generateTheMainThing(trackData, customOptions);
 		res.setHeader("Content-Type", "image/png");
 		res.setHeader("Cache-Control", "public, max-age=30");
 		if (!req.query.rid) {
